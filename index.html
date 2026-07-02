@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>格式转换器 · 视频转音频</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#151B54;
+    --navy-light:#232C78;
+    --navy-soft:#EEF0FA;
+    --white:#FFFFFF;
+    --border:#E1E3EF;
+    --text-secondary:#6B7280;
+    --success:#1E9E6B;
+    --error:#C0392B;
+
+    --bg:var(--white);
+    --surface:var(--white);
+    --text:var(--navy);
+    --text-muted:var(--text-secondary);
+    --accent:var(--navy);
+    --accent-contrast:var(--white);
+    --dropzone-bg:var(--navy-soft);
+    --border-color:var(--border);
+
+    --radius:14px;
+    --transition: all .25s ease;
+  }
+
+  body.inverted{
+    --bg:var(--navy);
+    --surface:var(--navy-light);
+    --text:var(--white);
+    --text-muted:#C7CBEA;
+    --accent:var(--white);
+    --accent-contrast:var(--navy);
+    --dropzone-bg:#1D2566;
+    --border-color:#33397D;
+  }
+
+  *{box-sizing:border-box;}
+
+  html,body{
+    margin:0;padding:0;height:100%;
+  }
+
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    transition:background .35s ease, color .35s ease;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:32px 16px 64px;
+  }
+
+  .top-bar{
+    width:100%;
+    max-width:640px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:28px;
+  }
+
+  .brand{
+    display:flex;
+    align-items:baseline;
+    gap:10px;
+  }
+
+  .brand-mark{
+    width:12px;height:12px;border-radius:3px;
+    background:var(--accent);
+    transition:var(--transition);
+  }
+
+  h1{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:22px;
+    font-weight:600;
+    letter-spacing:-0.01em;
+    margin:0;
+  }
+
+  .invert-toggle{
+    width:38px;height:38px;
+    border-radius:50%;
+    border:1.5px solid var(--border-color);
+    background:var(--surface);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    transition:var(--transition);
+    flex-shrink:0;
+  }
+  .invert-toggle:hover{
+    border-color:var(--accent);
+    transform:rotate(20deg);
+  }
+  .invert-toggle svg{
+    width:18px;height:18px;
+    fill:var(--text);
+    transition:var(--transition);
+  }
+
+  main{
+    width:100%;
+    max-width:640px;
+  }
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--border-color);
+    border-radius:var(--radius);
+    padding:28px;
+    margin-bottom:20px;
+    transition:var(--transition);
+  }
+
+  .dropzone{
+    border:2px dashed var(--border-color);
+    background:var(--dropzone-bg);
+    border-radius:var(--radius);
+    padding:40px 20px;
+    text-align:center;
+    cursor:pointer;
+    transition:var(--transition);
+  }
+  .dropzone.drag{
+    border-color:var(--accent);
+    transform:scale(1.01);
+  }
+  .dropzone svg{
+    width:34px;height:34px;
+    fill:none;
+    stroke:var(--accent);
+    stroke-width:1.6;
+    margin-bottom:10px;
+  }
+  .dropzone p{
+    margin:4px 0;
+    font-size:15px;
+    color:var(--text);
+    font-weight:500;
+  }
+  .dropzone span{
+    font-size:13px;
+    color:var(--text-muted);
+  }
+  input[type=file]{display:none;}
+
+  .file-info{
+    display:none;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-top:16px;
+    padding:12px 14px;
+    border-radius:10px;
+    background:var(--dropzone-bg);
+    font-family:'JetBrains Mono',monospace;
+    font-size:12.5px;
+    color:var(--text);
+  }
+  .file-info.show{display:flex;}
+  .file-info .name{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .file-info .size{
+    color:var(--text-muted);
+    flex-shrink:0;
+  }
+
+  .section-label{
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    color:var(--text-muted);
+    margin:22px 0 10px;
+    font-weight:600;
+  }
+
+  .format-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:10px;
+  }
+
+  .format-btn{
+    border:1.5px solid var(--border-color);
+    background:transparent;
+    color:var(--text);
+    border-radius:10px;
+    padding:16px 8px;
+    font-family:'Space Grotesk',sans-serif;
+    font-size:15px;
+    font-weight:600;
+    cursor:pointer;
+    transition:var(--transition);
+    letter-spacing:.02em;
+  }
+  .format-btn:hover:not(:disabled){
+    background:var(--accent);
+    color:var(--accent-contrast);
+    border-color:var(--accent);
+  }
+  .format-btn:disabled{
+    opacity:.4;
+    cursor:not-allowed;
+  }
+
+  .progress-wrap{
+    display:none;
+    margin-top:20px;
+  }
+  .progress-wrap.show{display:block;}
+  .progress-track{
+    width:100%;
+    height:6px;
+    border-radius:99px;
+    background:var(--dropzone-bg);
+    overflow:hidden;
+  }
+  .progress-fill{
+    height:100%;
+    width:0%;
+    background:var(--accent);
+    border-radius:99px;
+    transition:width .2s ease;
+  }
+  .progress-text{
+    margin-top:8px;
+    font-size:12.5px;
+    color:var(--text-muted);
+    font-family:'JetBrains Mono',monospace;
+    display:flex;
+    justify-content:space-between;
+  }
+
+  .status{
+    margin-top:14px;
+    font-size:13px;
+    font-weight:500;
+    display:none;
+  }
+  .status.show{display:block;}
+  .status.ok{color:var(--success);}
+  .status.err{color:var(--error);}
+
+  .error-box{
+    display:none;
+    margin-top:12px;
+    border:1px solid var(--error);
+    border-radius:10px;
+    overflow:hidden;
+  }
+  .error-box.show{display:block;}
+  .error-box-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:8px 12px;
+    background:var(--error);
+    color:#fff;
+    font-size:12px;
+    font-weight:600;
+  }
+  .error-box-head button{
+    border:1px solid rgba(255,255,255,.6);
+    background:transparent;
+    color:#fff;
+    font-size:11px;
+    padding:3px 8px;
+    border-radius:6px;
+    cursor:pointer;
+  }
+  .error-box-head button:hover{
+    background:rgba(255,255,255,.15);
+  }
+  .error-box pre{
+    margin:0;
+    padding:10px 12px;
+    max-height:180px;
+    overflow:auto;
+    font-family:'JetBrains Mono',monospace;
+    font-size:11.5px;
+    line-height:1.5;
+    color:var(--text);
+    background:var(--surface);
+    white-space:pre-wrap;
+    word-break:break-word;
+  }
+
+  /* hidden bonus panel — only unlocked in inverted mode */
+  .bonus-panel{
+    display:none;
+    margin-top:20px;
+    padding-top:20px;
+    border-top:1px dashed var(--border-color);
+  }
+  body.inverted .bonus-panel.unlocked{
+    display:block;
+  }
+  .bonus-panel .tag{
+    display:inline-block;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    background:var(--accent);
+    color:var(--accent-contrast);
+    padding:3px 8px;
+    border-radius:5px;
+    margin-bottom:10px;
+  }
+
+  footer{
+    margin-top:24px;
+    font-size:12px;
+    color:var(--text-muted);
+    text-align:center;
+  }
+
+  @media (max-width:480px){
+    .card{padding:20px 16px;}
+    h1{font-size:19px;}
+    .dropzone{padding:30px 14px;}
+    .format-grid{gap:8px;}
+    .format-btn{font-size:13.5px;padding:14px 4px;}
+  }
+
+  @media (min-width:768px) and (max-width:1024px){
+    main{max-width:680px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div class="brand">
+    <span class="brand-mark"></span>
+    <h1>格式转换器</h1>
+  </div>
+  <button class="invert-toggle" id="invertToggle" aria-label="切换配色" title="切换配色">
+    <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0 0 20 10 10 0 0 0 8.66-5A8 8 0 0 1 12 2z"/></svg>
+  </button>
+</div>
+
+<main>
+  <div class="card">
+    <div class="dropzone" id="dropzone">
+      <svg viewBox="0 0 24 24"><path d="M12 3v12m0-12l-4 4m4-4l4 4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <p>点击或拖拽视频文件到此处</p>
+      <span>支持 MP4 · MOV · MKV · AVI · WEBM</span>
+      <input type="file" id="fileInput" accept="video/*">
+    </div>
+
+    <div class="file-info" id="fileInfo">
+      <span class="name" id="fileName"></span>
+      <span class="size" id="fileSize"></span>
+    </div>
+
+    <div class="section-label">转换为</div>
+    <div class="format-grid">
+      <button class="format-btn" data-fmt="wav" disabled>WAV</button>
+      <button class="format-btn" data-fmt="mp3" disabled>MP3</button>
+      <button class="format-btn" data-fmt="ogg" disabled>OGG</button>
+    </div>
+
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-text">
+        <span id="progressLabel">正在加载转换引擎…</span>
+        <span id="progressPct">0%</span>
+      </div>
+    </div>
+
+    <div class="status" id="status"></div>
+
+    <div class="error-box" id="errorBox">
+      <div class="error-box-head">
+        <span>错误详情</span>
+        <button type="button" id="copyErrBtn">复制</button>
+      </div>
+      <pre id="errorLog"></pre>
+    </div>
+
+    <!-- 隐藏功能：仅在反色模式下解锁显示 -->
+    <div class="bonus-panel" id="bonusPanel">
+      <span class="tag">额外模式</span>
+      <div class="section-label" style="margin-top:0;">WAV 转 AIFF</div>
+      <div class="dropzone" id="dropzoneAiff" style="padding:24px 14px;">
+        <p>点击或拖拽 WAV 文件到此处</p>
+        <span>将转换为无损 AIFF 格式</span>
+        <input type="file" id="fileInputAiff" accept=".wav,audio/wav">
+      </div>
+      <div class="file-info" id="fileInfoAiff">
+        <span class="name" id="fileNameAiff"></span>
+        <span class="size" id="fileSizeAiff"></span>
+      </div>
+      <div class="format-grid" style="grid-template-columns:1fr;margin-top:10px;">
+        <button class="format-btn" id="aiffBtn" disabled>转换为 AIFF</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>所有转换均在本机浏览器内完成，文件不会上传到任何服务器。</footer>
+</main>
+
+<script type="module">
+import { FFmpeg } from './vendor/ffmpeg/index.js';
+import { fetchFile, toBlobURL } from './vendor/util/index.js';
+
+(async function(){
+  // 本地自托管：所有 ffmpeg.wasm 文件（含 worker.js）都和本页面同源部署，
+  // 避免"跨域创建 Worker"被浏览器拦截的问题，双击本地文件或部署到任意静态网站均可使用。
+  const CORE_BASE = './vendor/core';
+
+  const ffmpeg = new FFmpeg();
+  let ffmpegReady = false;
+  let loadingPromise = null;
+  let logBuffer = [];
+
+  ffmpeg.on('log', ({message})=>{
+    logBuffer.push(message);
+    if(logBuffer.length > 60) logBuffer.shift();
+  });
+
+  function ensureFFmpeg(){
+    if(!loadingPromise){
+      loadingPromise = (async ()=>{
+        const coreURL = await toBlobURL(`${CORE_BASE}/ffmpeg-core.js`, 'text/javascript');
+        const wasmURL = await toBlobURL(`${CORE_BASE}/ffmpeg-core.wasm`, 'application/wasm');
+        await ffmpeg.load({ coreURL, wasmURL });
+        ffmpegReady = true;
+      })().catch(err=>{
+        loadingPromise = null; // 加载失败时重置，允许下次重试重新加载
+        throw err;
+      });
+    }
+    return loadingPromise;
+  }
+
+  function classifyError(err, stage){
+    // 给出一个便于排查的错误码：区分是"引擎加载阶段"还是"转换执行阶段"出错
+    const msg = (err && (err.message || err.toString())) || '未知错误';
+    let code = 'E-UNKNOWN';
+    if(stage === 'load'){
+      code = 'E-LOAD-' + (/fetch|network|Failed to fetch/i.test(msg) ? 'NETWORK' : /wasm/i.test(msg) ? 'WASM' : 'GENERIC');
+    } else if(stage === 'exec'){
+      code = 'E-EXEC-' + (/memory|out of/i.test(msg) ? 'MEMORY' : /codec|encoder|unknown/i.test(msg) ? 'CODEC' : 'GENERIC');
+    } else if(stage === 'io'){
+      code = 'E-IO-GENERIC';
+    }
+    return { code, msg };
+  }
+
+  function showError(err, stage){
+    const { code, msg } = classifyError(err, stage);
+    setStatus(status, '转换失败（错误码 ' + code + '），详情见下方。', 'err');
+    const lines = [];
+    lines.push('[错误码] ' + code);
+    lines.push('[阶段] ' + stage);
+    lines.push('[信息] ' + msg);
+    lines.push('[UA] ' + navigator.userAgent);
+    lines.push('[页面协议] ' + location.protocol);
+    lines.push('[crossOriginIsolated] ' + (typeof crossOriginIsolated !== 'undefined' ? crossOriginIsolated : 'n/a'));
+    if(logBuffer.length){
+      lines.push('[ffmpeg 日志]');
+      lines.push(logBuffer.join('\n'));
+    }
+    errorLog.textContent = lines.join('\n');
+    errorBox.classList.add('show');
+  }
+
+  function fmtSize(bytes){
+    if(bytes < 1024) return bytes + ' B';
+    if(bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+    return (bytes/1024/1024).toFixed(1) + ' MB';
+  }
+
+  function setStatus(el, msg, type){
+    el.textContent = msg;
+    el.className = 'status show' + (type ? ' '+type : '');
+  }
+
+  function downloadBlob(blob, filename){
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  /* ---------- 主功能：视频 → 音频 ---------- */
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+  const fileInfo = document.getElementById('fileInfo');
+  const fileName = document.getElementById('fileName');
+  const fileSize = document.getElementById('fileSize');
+  const formatBtns = document.querySelectorAll('.format-btn[data-fmt]');
+  const progressWrap = document.getElementById('progressWrap');
+  const progressFill = document.getElementById('progressFill');
+  const progressLabel = document.getElementById('progressLabel');
+  const progressPct = document.getElementById('progressPct');
+  const status = document.getElementById('status');
+  const errorBox = document.getElementById('errorBox');
+  const errorLog = document.getElementById('errorLog');
+  const copyErrBtn = document.getElementById('copyErrBtn');
+
+  copyErrBtn.addEventListener('click', async ()=>{
+    try{
+      await navigator.clipboard.writeText(errorLog.textContent);
+      copyErrBtn.textContent = '已复制';
+      setTimeout(()=> copyErrBtn.textContent = '复制', 1500);
+    }catch(e){
+      copyErrBtn.textContent = '复制失败';
+    }
+  });
+
+  let currentFile = null;
+
+  ['dragover','dragenter'].forEach(evt=>{
+    dropzone.addEventListener(evt, e=>{ e.preventDefault(); dropzone.classList.add('drag'); });
+  });
+  ['dragleave','drop'].forEach(evt=>{
+    dropzone.addEventListener(evt, e=>{ e.preventDefault(); dropzone.classList.remove('drag'); });
+  });
+  dropzone.addEventListener('drop', e=>{
+    const f = e.dataTransfer.files[0];
+    if(f) handleFile(f);
+  });
+  dropzone.addEventListener('click', ()=> fileInput.click());
+  fileInput.addEventListener('change', e=>{
+    if(e.target.files[0]) handleFile(e.target.files[0]);
+  });
+
+  function handleFile(f){
+    currentFile = f;
+    fileName.textContent = f.name;
+    fileSize.textContent = fmtSize(f.size);
+    fileInfo.classList.add('show');
+    formatBtns.forEach(b=> b.disabled = false);
+    status.className = 'status';
+    ensureFFmpeg().catch(()=>{});
+  }
+
+  formatBtns.forEach(btn=>{
+    btn.addEventListener('click', ()=> convertVideo(btn.dataset.fmt));
+  });
+
+  async function convertVideo(fmt){
+    if(!currentFile) return;
+    formatBtns.forEach(b=> b.disabled = true);
+    progressWrap.classList.add('show');
+    status.className = 'status';
+    errorBox.classList.remove('show');
+    logBuffer = [];
+    progressLabel.textContent = ffmpegReady ? '正在转换…' : '正在加载转换引擎…';
+    progressFill.style.width = '0%';
+    progressPct.textContent = '0%';
+
+    let stage = 'load';
+    try{
+      await ensureFFmpeg();
+      progressLabel.textContent = '正在转换…';
+
+      const onProgress = ({progress})=>{
+        const pct = Math.min(100, Math.max(0, Math.round((progress||0)*100)));
+        progressFill.style.width = pct + '%';
+        progressPct.textContent = pct + '%';
+      };
+      ffmpeg.on('progress', onProgress);
+
+      stage = 'io';
+      const inputName = 'input_' + Date.now();
+      const outputName = 'output.' + fmt;
+      await ffmpeg.writeFile(inputName, await fetchFile(currentFile));
+
+      let args;
+      if(fmt === 'wav') args = ['-i', inputName, '-vn', '-acodec', 'pcm_s16le', outputName];
+      else if(fmt === 'mp3') args = ['-i', inputName, '-vn', '-acodec', 'libmp3lame', '-q:a', '2', outputName];
+      else args = ['-i', inputName, '-vn', '-acodec', 'libvorbis', '-q:a', '5', outputName];
+
+      stage = 'exec';
+      await ffmpeg.exec(args);
+
+      stage = 'io';
+      const data = await ffmpeg.readFile(outputName);
+      const blob = new Blob([data.buffer], { type: 'audio/'+fmt });
+      const base = currentFile.name.replace(/\.[^/.]+$/, '');
+      downloadBlob(blob, base + '.' + fmt);
+
+      await ffmpeg.deleteFile(inputName);
+      await ffmpeg.deleteFile(outputName);
+      ffmpeg.off('progress', onProgress);
+
+      setStatus(status, '转换完成，已开始下载。', 'ok');
+    }catch(err){
+      console.error(err);
+      showError(err, stage);
+    }finally{
+      formatBtns.forEach(b=> b.disabled = false);
+      progressWrap.classList.remove('show');
+    }
+  }
+
+  /* ---------- 隐藏功能：反色模式 + WAV → AIFF ---------- */
+  const invertToggle = document.getElementById('invertToggle');
+  const bonusPanel = document.getElementById('bonusPanel');
+
+  invertToggle.addEventListener('click', ()=>{
+    document.body.classList.toggle('inverted');
+    if(document.body.classList.contains('inverted')){
+      bonusPanel.classList.add('unlocked');
+    } else {
+      bonusPanel.classList.remove('unlocked');
+    }
+  });
+
+  const dropzoneAiff = document.getElementById('dropzoneAiff');
+  const fileInputAiff = document.getElementById('fileInputAiff');
+  const fileInfoAiff = document.getElementById('fileInfoAiff');
+  const fileNameAiff = document.getElementById('fileNameAiff');
+  const fileSizeAiff = document.getElementById('fileSizeAiff');
+  const aiffBtn = document.getElementById('aiffBtn');
+
+  let aiffFile = null;
+
+  ['dragover','dragenter'].forEach(evt=>{
+    dropzoneAiff.addEventListener(evt, e=>{ e.preventDefault(); dropzoneAiff.classList.add('drag'); });
+  });
+  ['dragleave','drop'].forEach(evt=>{
+    dropzoneAiff.addEventListener(evt, e=>{ e.preventDefault(); dropzoneAiff.classList.remove('drag'); });
+  });
+  dropzoneAiff.addEventListener('drop', e=>{
+    const f = e.dataTransfer.files[0];
+    if(f) handleAiffFile(f);
+  });
+  dropzoneAiff.addEventListener('click', ()=> fileInputAiff.click());
+  fileInputAiff.addEventListener('change', e=>{
+    if(e.target.files[0]) handleAiffFile(e.target.files[0]);
+  });
+
+  function handleAiffFile(f){
+    aiffFile = f;
+    fileNameAiff.textContent = f.name;
+    fileSizeAiff.textContent = fmtSize(f.size);
+    fileInfoAiff.classList.add('show');
+    aiffBtn.disabled = false;
+    ensureFFmpeg().catch(()=>{});
+  }
+
+  aiffBtn.addEventListener('click', async ()=>{
+    if(!aiffFile) return;
+    aiffBtn.disabled = true;
+    progressWrap.classList.add('show');
+    progressLabel.textContent = ffmpegReady ? '正在转换…' : '正在加载转换引擎…';
+    progressFill.style.width = '0%';
+    progressPct.textContent = '0%';
+    status.className = 'status';
+    errorBox.classList.remove('show');
+    logBuffer = [];
+
+    let stage = 'load';
+    try{
+      await ensureFFmpeg();
+      progressLabel.textContent = '正在转换…';
+
+      const onProgress = ({progress})=>{
+        const pct = Math.min(100, Math.max(0, Math.round((progress||0)*100)));
+        progressFill.style.width = pct + '%';
+        progressPct.textContent = pct + '%';
+      };
+      ffmpeg.on('progress', onProgress);
+
+      stage = 'io';
+      const inputName = 'ainput_' + Date.now();
+      const outputName = 'output.aiff';
+      await ffmpeg.writeFile(inputName, await fetchFile(aiffFile));
+
+      stage = 'exec';
+      await ffmpeg.exec(['-i', inputName, '-acodec', 'pcm_s16be', outputName]);
+
+      stage = 'io';
+      const data = await ffmpeg.readFile(outputName);
+      const blob = new Blob([data.buffer], { type:'audio/aiff' });
+      const base = aiffFile.name.replace(/\.[^/.]+$/, '');
+      downloadBlob(blob, base + '.aiff');
+
+      await ffmpeg.deleteFile(inputName);
+      await ffmpeg.deleteFile(outputName);
+      ffmpeg.off('progress', onProgress);
+
+      setStatus(status, 'AIFF 转换完成，已开始下载。', 'ok');
+    }catch(err){
+      console.error(err);
+      showError(err, stage);
+    }finally{
+      aiffBtn.disabled = false;
+      progressWrap.classList.remove('show');
+    }
+  });
+})();
+</script>
+</body>
+</html>
